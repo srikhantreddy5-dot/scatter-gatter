@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="d8111fb8-9e0b-4339-b210-6a98d6fb0807" >
+		<http:listener-connection host="localhost" port="8081" />
+	</http:listener-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="cad572fc-1818-46ed-a2fd-1215441485fd" >
+		<db:my-sql-connection host="iltdb.learn.mulesoft.com" port="3306" user="mule" password="mule" database="training" />
+	</db:config>
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="81171c59-115c-48c8-a2a3-8675d6c23cf0" >
+		<http:request-connection host="training4-american-ws.cloudhub.io" port="80" />
+	</http:request-config>
+	<flow name="scatter_gatterFlow" doc:id="cf204d7f-8c5e-4812-805e-505b9f75f034" >
+		<http:listener doc:name="Listener" doc:id="27816ff0-9cb2-437e-8358-08c0d6cfefbf" config-ref="HTTP_Listener_config" path="/scatter"/>
+		<logger level="INFO" doc:name="Logger" doc:id="29d4db75-ca64-4186-b2c7-191cb6c1e722" />
+		<scatter-gather doc:name="Scatter-Gather" doc:id="e8ed9ef0-5b46-4182-8277-8bb5f01df35b" >
+			<route >
+				<http:request method="GET" doc:name="Request" doc:id="a416edf6-7e6d-460e-904d-2ac63e085e2c" path="/api/flights" sendCorrelationId="ALWAYS" config-ref="HTTP_Request_configuration">
+					<http:query-params ><![CDATA[#[output application/java
+---
+{
+	origin : attributes.queryParams.origin,
+	destination : attributes.queryParams.destination
+}]]]></http:query-params>
+				</http:request>
+			</route>
+			<route >
+				<db:select doc:name="Select" doc:id="1d6d320a-fc18-452d-a3a9-c7f5807443ba" config-ref="Database_Config">
+					<db:sql><![CDATA[SELECT *
+FROM accounts
+WHERE accountID = 1;]]></db:sql>
+				</db:select>
+			</route>
+		</scatter-gather>
+		<ee:transform doc:name="Transform Message" doc:id="0c9e41d5-6d21-4ff3-803f-4dd4e6c807d3" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="b51d3107-1f05-48d9-8b08-03aad4cfe6c1" />
+	</flow>
+</mule>
